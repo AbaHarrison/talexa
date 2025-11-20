@@ -358,6 +358,10 @@ HTML_TEMPLATE = '''
 def index():
     return render_template_string(HTML_TEMPLATE)
 
+import requests
+
+N8N_WEBHOOK_URL = "https://nandev-dmazbxa0ggg2ghhr.germanywestcentral-01.azurewebsites.net/webhook/e1b45c7b-14d3-429a-8015-b6c0975915d8"
+
 @app.route('/submit', methods=['POST'])
 def submit_application():
     # Get form data
@@ -369,27 +373,23 @@ def submit_application():
     
     # Handle file upload
     file = request.files.get('file')
-    if file:
-        filename = file.filename
-        # In production, save the file securely
-        # file.save(os.path.join('uploads', filename))
-    
-    # Process the application (save to database, send email, etc.)
-    print(f"New Application Received:")
-    print(f"Name: {name}")
-    print(f"Email: {email}")
-    print(f"Location: {location}")
-    print(f"File: {filename if file else 'No file'}")
-    print(f"Privacy Consent: {privacy}")
-    print(f"Marketing Consent: {marketing}")
-    
-    # Return the redirect URL
-    return jsonify({
-        'success': True, 
-        'redirect_url': 'https://nandev-dmazbxa0ggg2ghhr.germanywestcentral-01.azurewebsites.net/form/61dbf474-acd4-4e6a-b432-40cc1807c90c'
-    })
+
+    # Prepare payload to n8n
+    payload = {
+        "name": name,
+        "email": email,
+        "location": location,
+        "privacy": privacy,
+        "marketing": marketing
+    }
+
+    # Send to n8n webhook
+    requests.post(N8N_WEBHOOK_URL, json=payload)
+
+    return jsonify({'success': True})
+
 
 if __name__ == '__main__':
-    # Create uploads directory if it doesn't exist
+    port = int(os.environ.get("PORT", 5000))
     os.makedirs('uploads', exist_ok=True)
-    app.run(debug=True, port=5000)
+    app.run(host="0.0.0.0", port=port)
